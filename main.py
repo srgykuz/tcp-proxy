@@ -141,7 +141,12 @@ def accept(conn: Conn, state: ConnState):
     try:
         fwd_conn = connect(FORWARD_HOST, FORWARD_PORT)
     except ConnectionRefusedError:
-        logger.error("forward host is unreachable")
+        logger.error("forward host: unreachable")
+        close(peer_conn, state)
+        return
+    except Exception as e:
+        logger.error(f"forward host: {e.__class__.__name__}")
+        logger.debug(e)
         close(peer_conn, state)
         return
 
@@ -162,6 +167,7 @@ def read(conn: Conn, state: ConnState):
     try:
         data = conn.s.recv(1024)
     except Exception as e:
+        logger.error(f"{conn}: {e.__class__.__name__}")
         logger.debug(f"{conn}: {e}")
         close(conn, state)
         return
@@ -196,6 +202,7 @@ def write(conn: Conn, state: ConnState):
     try:
         conn.s.sendall(data)
     except Exception as e:
+        logger.error(f"{conn}: {e.__class__.__name__}")
         logger.debug(f"{conn}: {e}")
         close(conn, state)
         return
