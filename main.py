@@ -23,13 +23,18 @@ logger = logging.getLogger(__name__)
 
 
 class Conn:
+    counter = 0
+
     def __init__(self, s: socket.socket):
+        Conn.counter += 1
+
         self.s = s
+        self.id = Conn.counter
         self.last_active = time.time()
         self.is_listen = False
 
     def __str__(self):
-        return f"{self.sockname()}#{self.fileno()}"
+        return f"{self.sockname()}#{self.id}"
 
     def fileno(self):
         return self.s.fileno()
