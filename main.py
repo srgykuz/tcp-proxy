@@ -213,20 +213,26 @@ def write(conn: Conn, state: ConnState):
         return
 
     data = state.sndbuf[conn]
-    state.sndbuf[conn] = bytes()
 
-    if len(data) == 0:
+    if not data:
         return
 
+    sent = 0
+
     try:
-        conn.s.sendall(data)
+        sent = conn.s.send(data)
     except Exception as e:
         logger.error(f"{conn}: {e.__class__.__name__}")
         logger.debug(f"{conn}: {e}")
         close(conn, state)
         return
 
-    logger.debug(f"{conn}: sent {len(data)} bytes")
+    state.sndbuf[conn] = data[sent:]
+
+    if state.sndbuf[conn]:
+        state.write.append(conn)
+
+    logger.debug(f"{conn}: sent {sent}/{len(data)} bytes")
 
 
 def catch(conn: Conn, state: ConnState):
