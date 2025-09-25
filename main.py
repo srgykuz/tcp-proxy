@@ -192,7 +192,11 @@ def read(conn: Conn, state: ConnState):
 
 
 def write(conn: Conn, state: ConnState):
-    state.write.remove(conn)
+    try:
+        state.write.remove(conn)
+    except ValueError:
+        return
+
     data = state.sndbuf[conn]
     state.sndbuf[conn] = bytes()
 
