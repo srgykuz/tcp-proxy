@@ -193,7 +193,6 @@ def accept(conn: Conn, state: ConnState):
 
 
 def read(conn: Conn, state: ConnState):
-    conn.last_active = time.time()
     data = bytes()
 
     try:
@@ -203,6 +202,8 @@ def read(conn: Conn, state: ConnState):
         logger.debug(f"{conn}: {e}")
         close(conn, state)
         return
+
+    conn.last_active = time.time()
 
     if data:
         logger.debug(f"{conn}: read {len(data)} bytes")
@@ -220,22 +221,19 @@ def read(conn: Conn, state: ConnState):
         return
 
     state.sndbuf[fwd_conn] += data
-    state.write.append(fwd_conn)
+
+    if fwd_conn not in state.write:
+        state.write.append(fwd_conn)
 
 
 def write(conn: Conn, state: ConnState):
-    conn.last_active = time.time()
-
     try:
         state.write.remove(conn)
     except ValueError:
         return
 
+    conn.last_active = time.time()
     data = state.sndbuf[conn]
-
-    if not data:
-        return
-
     sent = 0
 
     try:
