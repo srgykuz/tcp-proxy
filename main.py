@@ -69,11 +69,10 @@ def main():
     except KeyboardInterrupt:
         print()
 
-    lists = [state.read, state.write]
+    conns = state.read + state.write
 
-    for l in lists:
-        for conn in l:
-            close(conn, state)
+    for conn in conns:
+        close(conn, state)
 
 
 def run(state: ConnState):
@@ -153,7 +152,15 @@ def close(conn: Conn, state: ConnState):
 
 
 def accept(conn: Conn, state: ConnState):
-    peer_s, _ = conn.s.accept()
+    peer_s: socket.socket = None
+
+    try:
+        peer_s, _ = conn.s.accept()
+    except Exception as e:
+        logger.error(f"listen host: {e.__class__.__name__}")
+        logger.debug(e)
+        return
+
     peer_conn = Conn(peer_s)
     state.read.append(peer_conn)
 
