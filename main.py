@@ -63,6 +63,20 @@ class ConnState:
 
 def main():
     state = ConnState()
+
+    try:
+        run(state)
+    except KeyboardInterrupt:
+        print()
+
+    lists = [state.read, state.write]
+
+    for l in lists:
+        for conn in l:
+            close(conn, state)
+
+
+def run(state: ConnState):
     last_clear = time.time()
     clear_interval = 10
 
@@ -88,8 +102,6 @@ def main():
         if (time.time() - last_clear) > clear_interval:
             clear(state)
             last_clear = time.time()
-
-    logger.info("stopped")
 
 
 def listen(host: str, port: int) -> Conn:
@@ -253,7 +265,4 @@ def clear(state: ConnState):
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print()
+    main()
