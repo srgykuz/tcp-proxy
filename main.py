@@ -56,10 +56,11 @@ class Conn:
 
 
 class ConnState:
-    read: list[Conn] = []
-    write: list[Conn] = []
-    forward: dict[Conn, Conn] = {}
-    sndbuf: dict[Conn, bytes] = {}
+    def __init__(self):
+        self.read: list[Conn] = []
+        self.write: list[Conn] = []
+        self.forward: dict[Conn, Conn] = {}
+        self.snd_buf: dict[Conn, bytes] = {}
 
 
 def main():
@@ -144,7 +145,7 @@ def close(conn: Conn, state: ConnState):
         except ValueError:
             pass
 
-    state.sndbuf.pop(conn, None)
+    state.snd_buf.pop(conn, None)
 
     fwd_conn = state.forward.pop(conn, None)
 
@@ -192,8 +193,8 @@ def accept(conn: Conn, state: ConnState):
 
     state.forward[peer_conn] = fwd_conn
     state.forward[fwd_conn] = peer_conn
-    state.sndbuf[peer_conn] = bytes()
-    state.sndbuf[fwd_conn] = bytes()
+    state.snd_buf[peer_conn] = bytes()
+    state.snd_buf[fwd_conn] = bytes()
 
     logger.debug(f"{peer_conn}: mapped {fwd_conn}")
     logger.debug(f"{peer_conn.peername()} <--> {peer_conn.sockname()} <--> {fwd_conn.sockname()} <--> {fwd_conn.peername()}")
@@ -227,7 +228,7 @@ def read(conn: Conn, state: ConnState):
         close(conn, state)
         return
 
-    state.sndbuf[fwd_conn] += data
+    state.snd_buf[fwd_conn] += data
 
     if fwd_conn not in state.write:
         state.write.append(fwd_conn)
@@ -240,7 +241,7 @@ def write(conn: Conn, state: ConnState):
         return
 
     conn.last_active = time.time()
-    data = state.sndbuf[conn]
+    data = state.snd_buf[conn]
     sent = 0
 
     try:
@@ -251,9 +252,9 @@ def write(conn: Conn, state: ConnState):
         close(conn, state)
         return
 
-    state.sndbuf[conn] = data[sent:]
+    state.snd_buf[conn] = data[sent:]
 
-    if state.sndbuf[conn]:
+    if state.snd_buf[conn]:
         state.write.append(conn)
 
     logger.debug(f"{conn}: sent {sent}/{len(data)} bytes")
