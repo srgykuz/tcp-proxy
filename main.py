@@ -52,7 +52,6 @@ class Conn:
 class ConnState:
     read: list[Conn] = []
     write: list[Conn] = []
-    ex: list[Conn] = []
     forward: dict[Conn, Conn] = {}
 
 
@@ -64,7 +63,7 @@ def main():
     logger.info(f"{LISTEN_HOST}:{LISTEN_PORT} -> {FORWARD_HOST}:{FORWARD_PORT}")
 
     while state.read:
-        rlist, wlist, xlist = select.select(state.read, state.write, state.ex)
+        rlist, wlist, xlist = select.select(state.read, state.write, state.read)
 
         for conn in rlist:
             if conn is listen_conn:
@@ -112,7 +111,7 @@ def close(conn: Conn, state: ConnState):
         logger.debug(f"{conn}: closed")
         conn.s.close()
 
-    lists = [state.read, state.write, state.ex]
+    lists = [state.read, state.write]
 
     for l in lists:
         try:
@@ -130,7 +129,6 @@ def accept(conn: Conn, state: ConnState):
     peer_s, _ = conn.s.accept()
     peer_conn = Conn(peer_s)
     state.read.append(peer_conn)
-    state.ex.append(peer_conn)
     logger.debug(f"{peer_conn}: accepted from {peer_conn.peername()}")
     logger.info(f"{peer_conn.peername()} connected")
 
@@ -144,7 +142,6 @@ def accept(conn: Conn, state: ConnState):
         return
 
     state.read.append(fwd_conn)
-    state.ex.append(fwd_conn)
     logger.debug(f"{peer_conn}: connected to {fwd_conn}")
 
     state.forward[peer_conn] = fwd_conn
