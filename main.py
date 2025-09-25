@@ -1,9 +1,11 @@
 import os
+import io
 import sys
 import socket
 import select
 import logging
 import time
+import datetime
 
 
 LISTEN_HOST = os.getenv("LISTEN_HOST", "127.0.0.1")
@@ -16,6 +18,10 @@ LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
 IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
 MAX_CONNS = int(os.getenv("MAX_CONNS", 500))
 RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 8192))
+
+DUMP = os.getenv("DUMP", "") != ""
+DUMP_FILE = os.getenv("DUMP_FILE", "dump.txt")
+DUMP_FLUSH = os.getenv("DUMP_FLUSH", "") != ""
 
 
 logging.basicConfig(stream=sys.stdout, level=LOG_LEVEL, format="%(levelname)s: %(message)s")
@@ -70,9 +76,13 @@ class ConnState:
 
 def main():
     state = ConnState()
+    dump_f = None
+
+    if DUMP:
+        dump_f = open(DUMP_FILE, "a")
 
     try:
-        run(state)
+        run(state, dump_f)
     except KeyboardInterrupt:
         print()
 
@@ -81,8 +91,12 @@ def main():
     for conn in conns:
         close(conn, state)
 
+    if DUMP:
+        dump_f.flush()
+        dump_f.close()
 
-def run(state: ConnState):
+
+def run(state: ConnState, dump_f: io.IOBase):
     last_clear = time.time()
     clear_interval = 10
 
@@ -97,7 +111,7 @@ def run(state: ConnState):
             if conn is listen_conn:
                 accept(conn, state)
             else:
-                read(conn, state)
+                read(conn, state, dump_f)
 
         for conn in wlist:
             write(conn, state)
@@ -205,7 +219,7 @@ def accept(conn: Conn, state: ConnState):
     logger.debug(f"{peer_conn.peername()} <--> {peer_conn.sockname()} <--> {fwd_conn.sockname()} <--> {fwd_conn.peername()}")
 
 
-def read(conn: Conn, state: ConnState):
+def read(conn: Conn, state: ConnState, dump_f: io.IOBase):
     data = bytes()
 
     try:
@@ -220,7 +234,6 @@ def read(conn: Conn, state: ConnState):
 
     if data:
         logger.debug(f"{conn}: read {len(data)} bytes")
-        logger.debug(f"{conn}: {data.hex(" ")}")
     else:
         logger.info(f"{conn.peername()} disconnected")
         close(conn, state)
@@ -237,6 +250,9 @@ def read(conn: Conn, state: ConnState):
 
     if fwd_conn not in state.write:
         state.write.append(fwd_conn)
+
+    if dump_f:
+        dump(dump_f, conn, fwd_conn, data)
 
 
 def write(conn: Conn, state: ConnState):
@@ -280,6 +296,24 @@ def clear(state: ConnState):
         if (now - conn.last_active) > IDLE_TIMEOUT:
             logger.info(f"{conn}: idle")
             close(conn, state)
+
+
+def dump(f: io.IOBase, frm: Conn, to: Conn, data: bytes):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    ts = int(now.timestamp() * 1000)
+    s = (
+        f"[{ts}] " +
+        f"[{frm.peername()} -> {to.peername()}] " +
+        f"[{frm.id} -> {to.id}] " +
+        f"[{len(data)}] " +
+        f"{data.hex(" ")}" +
+        "\n"
+    )
+
+    f.write(s)
+
+    if DUMP_FLUSH:
+        f.flush()
 
 
 if __name__ == "__main__":
