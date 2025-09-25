@@ -132,6 +132,7 @@ def accept(conn: Conn, state: ConnState):
     peer_s, _ = conn.s.accept()
     peer_conn = Conn(peer_s)
     state.read.append(peer_conn)
+
     logger.debug(f"{peer_conn}: accepted from {peer_conn.peername()}")
     logger.info(f"{peer_conn.peername()} connected")
 
@@ -145,12 +146,13 @@ def accept(conn: Conn, state: ConnState):
         return
 
     state.read.append(fwd_conn)
-    logger.debug(f"{peer_conn}: connected to {fwd_conn}")
 
     state.forward[peer_conn] = fwd_conn
     state.forward[fwd_conn] = peer_conn
     state.sndbuf[peer_conn] = bytes()
     state.sndbuf[fwd_conn] = bytes()
+
+    logger.debug(f"{peer_conn}: mapped to {fwd_conn}")
     logger.debug(f"{peer_conn.peername()} <--> {peer_conn.sockname()} <--> {fwd_conn.sockname()} <--> {fwd_conn.peername()}")
 
 
@@ -167,7 +169,6 @@ def read(conn: Conn, state: ConnState):
     if data:
         logger.debug(f"{conn}: read {len(data)} bytes")
         logger.debug(f"{conn}: {data.hex(" ")}")
-        logger.debug(f"{conn.peername()} -{len(data)}-> {conn.sockname()}")
     else:
         logger.info(f"{conn.peername()} disconnected")
         close(conn, state)
@@ -185,8 +186,12 @@ def read(conn: Conn, state: ConnState):
 
 
 def write(conn: Conn, state: ConnState):
+    state.write.remove(conn)
     data = state.sndbuf[conn]
     state.sndbuf[conn] = bytes()
+
+    if len(data) == 0:
+        return
 
     try:
         conn.s.sendall(data)
@@ -195,8 +200,7 @@ def write(conn: Conn, state: ConnState):
         close(conn, state)
         return
 
-    state.write.remove(conn)
-    logger.debug(f"{conn}: sent {len(data)} bytes to {conn.peername()}")
+    logger.debug(f"{conn}: sent {len(data)} bytes")
 
 
 def catch(conn: Conn, state: ConnState):
