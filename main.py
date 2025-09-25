@@ -14,7 +14,7 @@ FORWARD_PORT = int(os.getenv("FORWARD_PORT", 1080))
 
 LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
 IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
-RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 1024))
+RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 8192))
 
 
 logging.basicConfig(stream=sys.stdout, level=LOG_LEVEL, format="%(levelname)s: %(message)s")
