@@ -53,6 +53,7 @@ class ConnState:
     read: list[Conn] = []
     write: list[Conn] = []
     forward: dict[Conn, Conn] = {}
+    sndbuf: dict[Conn, bytes] = {}
 
 
 def main():
@@ -119,6 +120,8 @@ def close(conn: Conn, state: ConnState):
         except ValueError:
             pass
 
+    state.sndbuf.pop(conn, None)
+
     fwd_conn = state.forward.pop(conn, None)
 
     if fwd_conn:
@@ -146,6 +149,8 @@ def accept(conn: Conn, state: ConnState):
 
     state.forward[peer_conn] = fwd_conn
     state.forward[fwd_conn] = peer_conn
+    state.sndbuf[peer_conn] = bytes()
+    state.sndbuf[fwd_conn] = bytes()
     logger.debug(f"{peer_conn.peername()} <--> {peer_conn.sockname()} <--> {fwd_conn.sockname()} <--> {fwd_conn.peername()}")
 
 
@@ -175,18 +180,23 @@ def read(conn: Conn, state: ConnState):
         close(conn, state)
         return
 
-    try:
-        fwd_conn.s.sendall(data)
-    except Exception as e:
-        logger.debug(f"{fwd_conn}: {e}")
-        close(fwd_conn, state)
-        return
-
-    logger.debug(f"{conn}: forwarded to {fwd_conn}")
+    state.sndbuf[fwd_conn] += data
+    state.write.append(fwd_conn)
 
 
 def write(conn: Conn, state: ConnState):
-    pass
+    data = state.sndbuf[conn]
+    state.sndbuf[conn] = bytes()
+
+    try:
+        conn.s.sendall(data)
+    except Exception as e:
+        logger.debug(f"{conn}: {e}")
+        close(conn, state)
+        return
+
+    state.write.remove(conn)
+    logger.debug(f"{conn}: sent {len(data)} bytes to {conn.peername()}")
 
 
 def catch(conn: Conn, state: ConnState):
