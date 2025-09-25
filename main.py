@@ -133,7 +133,7 @@ def accept(conn: Conn, state: ConnState):
     peer_conn = Conn(peer_s)
     state.read.append(peer_conn)
 
-    logger.debug(f"{peer_conn}: accepted from {peer_conn.peername()}")
+    logger.debug(f"{peer_conn}: accepted {peer_conn.peername()}")
     logger.info(f"{peer_conn.peername()} connected")
 
     fwd_conn: Conn = None
@@ -157,7 +157,7 @@ def accept(conn: Conn, state: ConnState):
     state.sndbuf[peer_conn] = bytes()
     state.sndbuf[fwd_conn] = bytes()
 
-    logger.debug(f"{peer_conn}: mapped to {fwd_conn}")
+    logger.debug(f"{peer_conn}: mapped {fwd_conn}")
     logger.debug(f"{peer_conn.peername()} <--> {peer_conn.sockname()} <--> {fwd_conn.sockname()} <--> {fwd_conn.peername()}")
 
 
