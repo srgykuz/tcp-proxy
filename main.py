@@ -14,6 +14,7 @@ FORWARD_PORT = int(os.getenv("FORWARD_PORT", 1080))
 
 LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
 IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
+RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 1024))
 
 
 logging.basicConfig(stream=sys.stdout, level=LOG_LEVEL, format="%(levelname)s: %(message)s")
@@ -177,7 +178,7 @@ def read(conn: Conn, state: ConnState):
     data = bytes()
 
     try:
-        data = conn.s.recv(1024)
+        data = conn.s.recv(RCV_BUF_SIZE)
     except Exception as e:
         logger.error(f"{conn}: {e.__class__.__name__}")
         logger.debug(f"{conn}: {e}")
