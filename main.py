@@ -3,6 +3,7 @@ import sys
 import socket
 import select
 import logging
+import time
 
 
 LISTEN_HOST = os.getenv("LISTEN_HOST", "127.0.0.1")
@@ -12,6 +13,7 @@ FORWARD_HOST = os.getenv("FORWARD_HOST", "127.0.0.1")
 FORWARD_PORT = int(os.getenv("FORWARD_PORT", 1080))
 
 LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
+IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
 
 
 logging.basicConfig(stream=sys.stdout, level=LOG_LEVEL, format="%(levelname)s: %(message)s")
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 class Conn:
     def __init__(self, s: socket.socket):
         self.s = s
+        self.last_active = time.time()
+        self.is_listen = False
 
     def __str__(self):
         return f"{self.sockname()}#{self.fileno()}"
@@ -58,13 +62,15 @@ class ConnState:
 
 def main():
     state = ConnState()
+    last_clear = time.time()
+    clear_interval = 10
 
     listen_conn = listen(LISTEN_HOST, LISTEN_PORT)
     state.read.append(listen_conn)
     logger.info(f"{LISTEN_HOST}:{LISTEN_PORT} -> {FORWARD_HOST}:{FORWARD_PORT}")
 
     while state.read:
-        rlist, wlist, xlist = select.select(state.read, state.write, state.read)
+        rlist, wlist, xlist = select.select(state.read, state.write, state.read, clear_interval)
 
         for conn in rlist:
             if conn is listen_conn:
@@ -77,6 +83,10 @@ def main():
 
         for conn in xlist:
             catch(conn, state)
+
+        if (time.time() - last_clear) > clear_interval:
+            clear(state)
+            last_clear = time.time()
 
     logger.info("stopped")
 
@@ -91,6 +101,7 @@ def listen(host: str, port: int) -> Conn:
     s.listen(128)
 
     c = Conn(s)
+    c.is_listen = True
 
     return c
 
@@ -162,6 +173,7 @@ def accept(conn: Conn, state: ConnState):
 
 
 def read(conn: Conn, state: ConnState):
+    conn.last_active = time.time()
     data = bytes()
 
     try:
@@ -192,6 +204,8 @@ def read(conn: Conn, state: ConnState):
 
 
 def write(conn: Conn, state: ConnState):
+    conn.last_active = time.time()
+
     try:
         state.write.remove(conn)
     except ValueError:
@@ -217,6 +231,18 @@ def write(conn: Conn, state: ConnState):
 def catch(conn: Conn, state: ConnState):
     logger.error(f"{conn}: exceptional condition")
     close(conn, state)
+
+
+def clear(state: ConnState):
+    now = time.time()
+
+    for conn in state.read:
+        if conn.is_listen:
+            continue
+
+        if (now - conn.last_active) > IDLE_TIMEOUT:
+            logger.info(f"{conn}: idle")
+            close(conn, state)
 
 
 if __name__ == "__main__":
