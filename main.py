@@ -14,6 +14,7 @@ FORWARD_PORT = int(os.getenv("FORWARD_PORT", 1080))
 
 LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
 IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
+MAX_CONNS = int(os.getenv("MAX_CONNS", 500))
 RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 8192))
 
 
@@ -162,6 +163,12 @@ def accept(conn: Conn, state: ConnState):
         return
 
     peer_conn = Conn(peer_s)
+
+    if len(state.read) > MAX_CONNS * 2:
+        logger.warning("listen host: maximum connections reached")
+        close(peer_conn, state)
+        return
+
     state.read.append(peer_conn)
 
     logger.debug(f"{peer_conn}: accepted {peer_conn.peername()}")
