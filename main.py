@@ -17,6 +17,7 @@ FORWARD_PORT = int(os.getenv("FORWARD_PORT", 1080))
 LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
 IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
 MAX_CONNS = int(os.getenv("MAX_CONNS", 500))
+BACKLOG_CONNS = int(os.getenv("BACKLOG_CONNS", 128))
 RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 8192))
 
 DUMP = os.getenv("DUMP", "") != ""
@@ -131,7 +132,7 @@ def listen(host: str, port: int) -> Conn:
     s.setblocking(False)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(addr)
-    s.listen(128)
+    s.listen(BACKLOG_CONNS)
 
     c = Conn(s)
     c.is_listen = True
