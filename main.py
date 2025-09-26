@@ -313,7 +313,7 @@ def dump(f: io.IOBase, frm: Conn, to: Conn, data: bytes):
         f"[{frm.peername()} -> {to.peername()}] " +
         f"[{frm.id} -> {to.id}] " +
         f"[{len(data)}] " +
-        f"{data.hex(" ")}" +
+        f"{data.hex(' ')}" +
         "\n"
     )
 
