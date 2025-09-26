@@ -171,7 +171,11 @@ def close(conn: Conn, state: ConnState):
     fwd_conn = state.forward.pop(conn, None)
 
     if fwd_conn:
-        close(fwd_conn, state)
+        if state.snd_buf.get(fwd_conn):
+            if fwd_conn not in state.write:
+                state.write.append(fwd_conn)
+        else:
+            close(fwd_conn, state)
 
 
 def accept(conn: Conn, state: ConnState):
@@ -297,6 +301,7 @@ def clear(state: ConnState):
 
         if (now - conn.last_active) > IDLE_TIMEOUT:
             logger.info(f"{conn}: idle")
+            state.snd_buf[conn] = bytes()
             close(conn, state)
 
 
