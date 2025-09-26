@@ -15,6 +15,7 @@ FORWARD_HOST = os.getenv("FORWARD_HOST", "127.0.0.1")
 FORWARD_PORT = int(os.getenv("FORWARD_PORT", 1080))
 
 LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
+
 IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
 MAX_CONNS = int(os.getenv("MAX_CONNS", 500))
 BACKLOG_CONNS = int(os.getenv("BACKLOG_CONNS", 128))
