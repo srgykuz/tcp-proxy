@@ -173,6 +173,8 @@ def close(conn: Conn, state: ConnState):
 
     if fwd_conn:
         if state.snd_buf.get(fwd_conn):
+            state.forward.pop(fwd_conn, None)
+
             if fwd_conn not in state.write:
                 state.write.append(fwd_conn)
         else:
