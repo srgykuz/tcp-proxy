@@ -93,12 +93,12 @@ def main():
     for conn in conns:
         close(conn, state)
 
-    if DUMP:
+    if dump_f:
         dump_f.flush()
         dump_f.close()
 
 
-def run(state: ConnState, dump_f: io.IOBase):
+def run(state: ConnState, dump_f: io.IOBase | None):
     last_clear = time.time()
     clear_interval = 10
 
@@ -179,7 +179,7 @@ def close(conn: Conn, state: ConnState):
 
 
 def accept(conn: Conn, state: ConnState):
-    peer_s: socket.socket = None
+    peer_s: socket.socket
 
     try:
         peer_s, _ = conn.s.accept()
@@ -200,7 +200,7 @@ def accept(conn: Conn, state: ConnState):
     logger.debug(f"{peer_conn}: accepted {peer_conn.peername()}")
     logger.info(f"{peer_conn.peername()} connected")
 
-    fwd_conn: Conn = None
+    fwd_conn: Conn
 
     try:
         fwd_conn = connect(FORWARD_HOST, FORWARD_PORT)
@@ -225,7 +225,7 @@ def accept(conn: Conn, state: ConnState):
     logger.debug(f"{peer_conn.peername()} <--> {peer_conn.sockname()} <--> {fwd_conn.sockname()} <--> {fwd_conn.peername()}")
 
 
-def read(conn: Conn, state: ConnState, dump_f: io.IOBase):
+def read(conn: Conn, state: ConnState, dump_f: io.IOBase | None):
     data = bytes()
 
     try:
