@@ -36,6 +36,7 @@ Pass them as environment variables.
 - `MAX_CONNS=500`: maximum number of accepted connections that are being forwarded, note that setting more than 500 will likely result in [error](https://man7.org/linux/man-pages/man2/select.2.html#DESCRIPTION)
 - `BACKLOG_CONNS=128`: maximum number of pending connections that are waiting to be accepted
 - `RCV_BUF_SIZE=8192`: maximum number of bytes to read at once per each connection
+- `SND_BUF_SIZE=8192`: maximum number of bytes to write at once per each connection
 - `DUMP=`: dump connections data into file, pass any value to enable it
 - `DUMP_FILE=dump.txt`: name of dump file
 - `DUMP_FLUSH=`: write into file immediately instead of buffering small writes, pass any value to enable it

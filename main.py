@@ -20,6 +20,7 @@ IDLE_TIMEOUT = int(os.getenv("IDLE_TIMEOUT", 120))
 MAX_CONNS = int(os.getenv("MAX_CONNS", 500))
 BACKLOG_CONNS = int(os.getenv("BACKLOG_CONNS", 128))
 RCV_BUF_SIZE = int(os.getenv("RCV_BUF_SIZE", 8192))
+SND_BUF_SIZE = int(os.getenv("SND_BUF_SIZE", 8192))
 
 DUMP = os.getenv("DUMP", "") != ""
 DUMP_FILE = os.getenv("DUMP_FILE", "dump.txt")
@@ -268,8 +269,10 @@ def write(conn: Conn, state: ConnState):
         return
 
     conn.last_active = time.time()
-    data = state.snd_buf[conn]
+
     sent = 0
+    total = len(state.snd_buf[conn])
+    data = state.snd_buf[conn][:SND_BUF_SIZE]
 
     try:
         sent = conn.s.send(data)
@@ -279,12 +282,12 @@ def write(conn: Conn, state: ConnState):
         close(conn, state)
         return
 
-    state.snd_buf[conn] = data[sent:]
+    state.snd_buf[conn] = state.snd_buf[conn][sent:]
 
     if state.snd_buf[conn]:
         state.write.append(conn)
 
-    logger.debug(f"{conn}: sent {sent}/{len(data)} bytes")
+    logger.debug(f"{conn}: sent {sent}/{total} bytes")
 
 
 def catch(conn: Conn, state: ConnState):
